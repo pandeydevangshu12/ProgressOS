@@ -45,6 +45,7 @@ query userContestRankingInfo($username: String!) {
 
 export class LeetCodeService {
   private cache = new Map<string, CacheEntry<any>>();
+  private inFlight = new Map<string, Promise<any>>();
   private readonly CACHE_TTL_MS = 5 * 60 * 1000;
 
   private async getOrFetch<T>(cacheKey: string, fetchFn: () => Promise<T>): Promise<T> {
@@ -52,9 +53,22 @@ export class LeetCodeService {
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
       return cached.data;
     }
-    const data = await fetchFn();
-    this.cache.set(cacheKey, { data, timestamp: Date.now() });
-    return data;
+    if (this.inFlight.has(cacheKey)) {
+      return this.inFlight.get(cacheKey)!;
+    }
+
+    const promise = (async () => {
+      try {
+        const data = await fetchFn();
+        this.cache.set(cacheKey, { data, timestamp: Date.now() });
+        return data;
+      } finally {
+        this.inFlight.delete(cacheKey);
+      }
+    })();
+
+    this.inFlight.set(cacheKey, promise);
+    return promise;
   }
 
   private async updateSyncTime(userId: string): Promise<void> {
@@ -69,11 +83,28 @@ export class LeetCodeService {
   }
 
   private async graphQLQuery<T>(query: string, variables: Record<string, string>): Promise<T> {
-    const response = await fetch(LEETCODE_GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+
+    let response: Response;
+    try {
+      response = await fetch(LEETCODE_GRAPHQL_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+        body: JSON.stringify({ query, variables }),
+        signal: controller.signal,
+      });
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        throw AppError.badRequest('LeetCode API timed out');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       throw AppError.badRequest(`LeetCode GraphQL API returned HTTP ${response.status}`);

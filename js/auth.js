@@ -14,6 +14,10 @@ function getClerkFrontendApi(pubKey) {
 
 let clerkReady = false;
 
+// Centralized API Base configuration
+const isLocalhostEnv = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+window.API_BASE = isLocalhostEnv ? 'http://localhost:5000' : '';
+
 // Initialize Clerk
 async function initClerk() {
   const frontendApi = getClerkFrontendApi(CLERK_PUBLISHABLE_KEY);
@@ -163,7 +167,7 @@ async function apiFetch(endpoint, options = {}) {
 }
 
 // Global API Request Helper with retry
-window.apiRequest = async function(method, path, body = null, retries = 2) {
+window.apiRequest = async function(method, path, body = null, retries = 1) {
   const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const API_BASE = isLocalhost ? 'http://localhost:5000' : '';
   const fullUrl = path.startsWith('http') ? path : `${API_BASE}${path}`;
@@ -177,16 +181,31 @@ window.apiRequest = async function(method, path, body = null, retries = 2) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await window.apiFetch(fullUrl, opts);
-      const data = await res.json();
+      if (res.status === 401 || res.status === 403 || res.status === 404) {
+        let errData = null;
+        try { errData = await res.json(); } catch {}
+        return errData || { success: false, status: res.status, error: `Request returned HTTP ${res.status}` };
+      }
+
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseErr) {
+        if (!res.ok) {
+          return { success: false, status: res.status, error: `Server returned HTTP ${res.status}` };
+        }
+        throw parseErr;
+      }
       return data;
     } catch (err) {
       if (attempt < retries) {
-        const delay = Math.min(1000 * Math.pow(2, attempt), 4000);
+        const delay = Math.min(1000 * Math.pow(2, attempt), 2000);
         await new Promise(r => setTimeout(r, delay));
         continue;
       }
-      console.error(`API Error [${method} ${path}]:`, err);
-      return { success: false, error: err.message };
+      console.warn(`API Error [${method} ${path}]:`, err?.message || err);
+      return { success: false, error: err?.message || 'Network error' };
     }
   }
 }

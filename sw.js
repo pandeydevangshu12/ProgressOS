@@ -33,11 +33,9 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // API requests: network-first with cache fallback
+  // API requests: network-only (never cached to protect sensitive/authenticated data)
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request).catch(() => fromCacheOrFallback(request, 503))
-    );
+    event.respondWith(fetch(request));
     return;
   }
 

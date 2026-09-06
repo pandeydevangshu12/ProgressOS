@@ -33,6 +33,7 @@ function generateSemesterIds(): string[] {
 
 export class VitService {
   private cache = new Map<string, CacheEntry<any>>();
+  private inFlight = new Map<string, Promise<any>>();
   private readonly CACHE_TTL_MS = 5 * 60 * 1000;
 
   private async getOrFetch<T>(cacheKey: string, fetchFn: () => Promise<T>): Promise<T> {
@@ -40,9 +41,22 @@ export class VitService {
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
       return cached.data;
     }
-    const data = await fetchFn();
-    this.cache.set(cacheKey, { data, timestamp: Date.now() });
-    return data;
+    if (this.inFlight.has(cacheKey)) {
+      return this.inFlight.get(cacheKey)!;
+    }
+
+    const promise = (async () => {
+      try {
+        const data = await fetchFn();
+        this.cache.set(cacheKey, { data, timestamp: Date.now() });
+        return data;
+      } finally {
+        this.inFlight.delete(cacheKey);
+      }
+    })();
+
+    this.inFlight.set(cacheKey, promise);
+    return promise;
   }
 
   private async updateSyncTime(userId: string): Promise<void> {
@@ -242,6 +256,20 @@ export class VitService {
   async getAnalytics(userId: string): Promise<VITAnalyticsResponse> {
     const cacheKey = `vit_analytics_${userId}`;
     return this.getOrFetch(cacheKey, async () => {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { vitUsername: true, vitPasswordEncrypted: true },
+      });
+
+      if (!user || !user.vitUsername || !user.vitPasswordEncrypted) {
+        return {
+          cgpa: 0,
+          creditsProgress: 0,
+          attendance: 0,
+          academicReadiness: 0,
+        };
+      }
+
       const profile = await this.getProfile(userId);
       const creditsProgress = profile.creditsRequired > 0
         ? parseFloat(((profile.creditsEarned / profile.creditsRequired) * 100).toFixed(1))

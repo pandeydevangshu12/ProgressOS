@@ -35,8 +35,40 @@ const ACHIEVEMENT_DEFS: Omit<Achievement, 'unlocked' | 'unlockedAt' | 'progress'
   { id: 'first_oss_activity', title: 'Open Source', description: 'Log an Open Source activity', icon: 'group', category: 'project' },
 ];
 
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
 export class AchievementsService {
+  private cache = new Map<string, CacheEntry<Achievement[]>>();
+  private inFlight = new Map<string, Promise<Achievement[]>>();
+  private readonly CACHE_TTL_MS = 60 * 1000; // 1 minute cache
+
   async getAll(userId: string): Promise<Achievement[]> {
+    const cached = this.cache.get(userId);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
+      return cached.data;
+    }
+    if (this.inFlight.has(userId)) {
+      return this.inFlight.get(userId)!;
+    }
+
+    const promise = (async () => {
+      try {
+        const result = await this.getAllInternal(userId);
+        this.cache.set(userId, { data: result, timestamp: Date.now() });
+        return result;
+      } finally {
+        this.inFlight.delete(userId);
+      }
+    })();
+
+    this.inFlight.set(userId, promise);
+    return promise;
+  }
+
+  private async getAllInternal(userId: string): Promise<Achievement[]> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {

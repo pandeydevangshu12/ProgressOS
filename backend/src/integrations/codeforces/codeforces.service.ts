@@ -17,10 +17,30 @@ import {
 
 export class CodeforcesService {
   private cache = new Map<string, CacheEntry<any>>();
+  private inFlight = new Map<string, Promise<any>>();
   private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
   /**
-   * Helper to retrieve from cache or fetch and update cache.
+   * Helper to execute fetch with timeout and standard User-Agent.
+   */
+  private async fetchWithTimeout(url: string, timeoutMs = 3500): Promise<Response> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'ProgressOS-App/1.0 (https://progressos.devangshupandey84.workers.dev)',
+          'Accept': 'application/json',
+        },
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  /**
+   * Helper to retrieve from cache or fetch and update cache, deduplicating concurrent in-flight requests.
    */
   private async getOrFetch<T>(
     cacheKey: string,
@@ -31,12 +51,25 @@ export class CodeforcesService {
       return cached.data;
     }
 
-    const data = await fetchFn();
-    this.cache.set(cacheKey, {
-      data,
-      timestamp: Date.now(),
-    });
-    return data;
+    if (this.inFlight.has(cacheKey)) {
+      return this.inFlight.get(cacheKey)!;
+    }
+
+    const promise = (async () => {
+      try {
+        const data = await fetchFn();
+        this.cache.set(cacheKey, {
+          data,
+          timestamp: Date.now(),
+        });
+        return data;
+      } finally {
+        this.inFlight.delete(cacheKey);
+      }
+    })();
+
+    this.inFlight.set(cacheKey, promise);
+    return promise;
   }
 
   /**
@@ -61,7 +94,7 @@ export class CodeforcesService {
     return this.getOrFetch(cacheKey, async () => {
       try {
         const url = `https://codeforces.com/api/user.info?handles=${encodeURIComponent(handle)}`;
-        const response = await fetch(url);
+        const response = await this.fetchWithTimeout(url);
         
         if (!response.ok) {
           throw AppError.badRequest(`Codeforces API returned HTTP ${response.status}`);
@@ -106,7 +139,7 @@ export class CodeforcesService {
     return this.getOrFetch(cacheKey, async () => {
       try {
         const url = `https://codeforces.com/api/user.rating?handle=${encodeURIComponent(handle)}`;
-        const response = await fetch(url);
+        const response = await this.fetchWithTimeout(url);
 
         if (!response.ok) {
           throw AppError.badRequest(`Codeforces API returned HTTP ${response.status}`);
@@ -166,7 +199,7 @@ export class CodeforcesService {
     return this.getOrFetch(cacheKey, async () => {
       try {
         const url = `https://codeforces.com/api/user.status?handle=${encodeURIComponent(handle)}`;
-        const response = await fetch(url);
+        const response = await this.fetchWithTimeout(url);
 
         if (!response.ok) {
           throw AppError.badRequest(`Codeforces API returned HTTP ${response.status}`);
@@ -270,8 +303,16 @@ export class CodeforcesService {
         }
 
         // 7. Estimated contests to Expert (1600)
-        const profile = await this.getProfile(userId, handle);
-        const history = await this.getRatingHistory(userId, handle);
+        let profile: CFProfileResponse = { rating: 0, maxRating: 0, rank: 'unrated', maxRank: 'unrated', avatar: '', handle };
+        try {
+          profile = await this.getProfile(userId, handle);
+        } catch {}
+
+        let history: CFRatingHistoryResponse[] = [];
+        try {
+          history = await this.getRatingHistory(userId, handle);
+        } catch {}
+
         let estimatedContestsToExpert: number | string | null = null;
         const targetRating = 1600;
 
@@ -331,7 +372,7 @@ export class CodeforcesService {
     return this.getOrFetch(cacheKey, async () => {
       try {
         const url = 'https://codeforces.com/api/recentActions?maxCount=100';
-        const response = await fetch(url);
+        const response = await this.fetchWithTimeout(url);
 
         if (!response.ok) {
           throw AppError.badRequest(`Codeforces API returned HTTP ${response.status}`);

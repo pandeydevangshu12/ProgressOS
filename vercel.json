@@ -5,6 +5,6 @@
     { "source": "/u/(.*)", "destination": "/u.html" },
     { "source": "/career-studio", "destination": "/career-studio/index.html" },
     { "source": "/career-studio/(.*)", "destination": "/career-studio/$1" },
-    { "source": "/", "destination": "/landing.html" }
+    { "source": "/", "destination": "/index.html" }
   ]
 }

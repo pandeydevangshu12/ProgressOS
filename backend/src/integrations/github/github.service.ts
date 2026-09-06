@@ -11,6 +11,7 @@ import {
 
 export class GitHubService {
   private cache = new Map<string, CacheEntry<any>>();
+  private inFlight = new Map<string, Promise<any>>();
   private readonly CACHE_TTL_MS = 5 * 60 * 1000;
 
   private async getOrFetch<T>(cacheKey: string, fetchFn: () => Promise<T>, force = false): Promise<T> {
@@ -19,10 +20,23 @@ export class GitHubService {
       if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
         return cached.data;
       }
+      if (this.inFlight.has(cacheKey)) {
+        return this.inFlight.get(cacheKey)!;
+      }
     }
-    const data = await fetchFn();
-    this.cache.set(cacheKey, { data, timestamp: Date.now() });
-    return data;
+
+    const promise = (async () => {
+      try {
+        const data = await fetchFn();
+        this.cache.set(cacheKey, { data, timestamp: Date.now() });
+        return data;
+      } finally {
+        this.inFlight.delete(cacheKey);
+      }
+    })();
+
+    this.inFlight.set(cacheKey, promise);
+    return promise;
   }
 
   private clearUserCache(userId: string): void {
@@ -46,13 +60,16 @@ export class GitHubService {
   }
 
   private async fetchGitHub<T>(url: string, token?: string | null): Promise<T> {
-    const headers: Record<string, string> = { 'Accept': 'application/vnd.github.v3+json' };
+    const headers: Record<string, string> = {
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'ProgressOS-App/1.0 (https://progressos.devangshupandey84.workers.dev)',
+    };
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 4000);
 
     let response: Response;
     try {

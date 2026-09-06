@@ -10,10 +10,18 @@ import { gitHubService } from '../integrations/github/github.service.js';
 import { TrackerSource } from '@prisma/client';
 import { resumeCompositionService } from './career/resume-composition.service.js';
 import type { ResumeContext } from '../types/resume-context.js';
+import { storageService } from './storage/storage.service.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const UPLOADS_DIR = path.resolve(__dirname, '../../../uploads/photos');
+async function loadPhotoBuffer(keyOrUrl: string): Promise<Buffer | null> {
+  try {
+    const file = await storageService.get(keyOrUrl);
+    if (!file) return null;
+    if (Buffer.isBuffer(file.data)) return file.data as Buffer;
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 const COMPLETION_CHECKS = [
   { key: 'name', label: 'Name', weight: 0.25 },
@@ -144,11 +152,8 @@ export class ReportService {
         // Try to load photo
         let photoBuffer: Buffer | null = null;
         const defaultPhoto = careerProfile?.photos?.[0];
-        if (defaultPhoto) {
-          try {
-            const photoPath = path.join(UPLOADS_DIR, defaultPhoto.storageKey);
-            photoBuffer = await fs.readFile(photoPath);
-          } catch { /* photo file not found */ }
+        if (defaultPhoto?.storageKey) {
+          photoBuffer = await loadPhotoBuffer(defaultPhoto.storageKey);
         }
 
         // Draw photo on the right (if available)
@@ -379,10 +384,8 @@ export class ReportService {
 
         let photoBuffer: Buffer | null = null;
         if (sections.photo?.url) {
-          try {
-            const photoPath = path.join(UPLOADS_DIR, path.basename(sections.photo.url));
-            photoBuffer = await fs.readFile(photoPath).catch(() => null);
-          } catch { /* skip */ }
+          const photoKey = path.basename(sections.photo.url);
+          photoBuffer = await loadPhotoBuffer(photoKey);
         }
 
         const textAreaWidth = photoBuffer ? 545 - 50 - photoSize - 20 : 495;

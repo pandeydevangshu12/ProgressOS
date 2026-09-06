@@ -22,8 +22,40 @@ export interface InsightsResponse {
   roiActions: ROIAction[];
 }
 
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
 export class InsightsService {
+  private cache = new Map<string, CacheEntry<InsightsResponse>>();
+  private inFlight = new Map<string, Promise<InsightsResponse>>();
+  private readonly CACHE_TTL_MS = 60 * 1000; // 1 minute cache
+
   async generate(userId: string): Promise<InsightsResponse> {
+    const cached = this.cache.get(userId);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
+      return cached.data;
+    }
+    if (this.inFlight.has(userId)) {
+      return this.inFlight.get(userId)!;
+    }
+
+    const promise = (async () => {
+      try {
+        const result = await this.generateInternal(userId);
+        this.cache.set(userId, { data: result, timestamp: Date.now() });
+        return result;
+      } finally {
+        this.inFlight.delete(userId);
+      }
+    })();
+
+    this.inFlight.set(userId, promise);
+    return promise;
+  }
+
+  private async generateInternal(userId: string): Promise<InsightsResponse> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {

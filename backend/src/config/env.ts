@@ -1,24 +1,36 @@
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { z } from 'zod';
 
-// Resolve the path to backend/.env for local development
-// On Vercel, env vars are injected by the platform, so dotenv is a no-op
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+// Load .env only in the local Node.js environment.
+// Cloudflare Workers and Vercel inject environment variables directly.
+if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(5000),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
-  CLERK_SECRET_KEY: z.string().min(1, 'CLERK_SECRET_KEY is required'),
+
+  NODE_ENV: z
+    .enum(['development', 'production', 'test'])
+    .default('development'),
+
+  DATABASE_URL: z.string().optional(),
+
+  CLERK_SECRET_KEY: z.string().optional().default(''),
+
   CLERK_PUBLISHABLE_KEY: z.string().optional(),
-  VIT_ENCRYPTION_KEY: z.string().default('dev-fallback-key-change-in-production'),
+
+  VIT_ENCRYPTION_KEY: z
+    .string()
+    .default('dev-fallback-key-change-in-production'),
+
   VIT_SYNC_INTERVAL_HOURS: z.coerce.number().default(6),
+
   GEMINI_API_KEY: z.string().default(''),
 
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -26,12 +38,12 @@ const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {
   console.error('❌ Invalid environment variables:');
   console.error(parsed.error.flatten().fieldErrors);
-  // In Vercel, process.exit kills the function without returning a response.
-  // Throw instead so the caller can handle it gracefully.
+
   throw new Error(
-    `Invalid environment variables: ${JSON.stringify(parsed.error.flatten().fieldErrors)}`
+    `Invalid environment variables: ${JSON.stringify(
+      parsed.error.flatten().fieldErrors
+    )}`
   );
 }
 
 export const env = parsed.data;
-

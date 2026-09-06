@@ -1,11 +1,12 @@
 import { prisma } from '../../config/database.js';
 import { AppError } from '../../utils/AppError.js';
-import { diskStorage, StorageService } from '../storage/storage.service.js';
+import { storageService, StorageService } from '../storage/storage.service.js';
+import { isValidImageMagicBytes } from '../../middleware/upload.js';
 
 export class CareerPhotoService {
   private storage: StorageService;
 
-  constructor(storage: StorageService = diskStorage) {
+  constructor(storage: StorageService = storageService) {
     this.storage = storage;
   }
 
@@ -26,6 +27,10 @@ export class CareerPhotoService {
     let profile = await prisma.careerProfile.findUnique({ where: { userId } });
     if (!profile) {
       profile = await prisma.careerProfile.create({ data: { userId } });
+    }
+
+    if (!isValidImageMagicBytes(file.buffer)) {
+      throw AppError.badRequest('Invalid image file: content does not match a valid JPEG, PNG, or WebP image');
     }
 
     const saved = await this.storage.save(
