@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta name="theme-color" content="#FF9933"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="ProgressOS"/>
+<link rel="manifest" href="/manifest.json"/>
+<link rel="apple-touch-icon" href="/icons/icon-512.svg"/>
+<title>Job Intelligence | ProgressOS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600;700;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = { theme: { extend: { colors: { primary: "#FF9933", "on-surface": "#1E293B", "on-surface-variant": "#64748B", secondary: "#000080", tertiary: "#128807", error: "#EF4444" }, spacing: { "max_width": "1440px", "gutter": "24px" } } } }
+</script>
+<style>
+body { background-color: #F9FAFB; color: #1E293B; font-family: 'Inter', sans-serif; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+.glass-card { background: #FFFFFF; border: 1px solid #E5E7EB; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04); transition: all 0.3s ease; }
+.glass-card:hover { border-color: #D1D5DB; box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.08), 0 4px 6px -2px rgb(0 0 0 / 0.04); }
+.bottom-nav { background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid #E5E7EB; }
+.bottom-nav .nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; color: #94a3b8; transition: color 0.2s; text-decoration: none; position: relative; -webkit-tap-highlight-color: transparent; }
+.bottom-nav .nav-item.active { color: #FF9933; }
+.bottom-nav .nav-item.active::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 24px; height: 2.5px; background: #FF9933; border-radius: 0 0 4px 4px; }
+.bottom-nav .nav-item span { font-size: 22px; }
+.bottom-nav .nav-item .nav-label { font-size: 9px; font-weight: 600; letter-spacing: 0.02em; }
+@supports (padding-bottom: env(safe-area-inset-bottom)) { .bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); } }
+@keyframes fade-in-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-in-up { animation: fade-in-up 0.4s ease-out both; }
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.preview-container { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.08); overflow: hidden; }
+.heatmap-bar { height: 8px; border-radius: 4px; transition: width 0.5s ease; }
+.priority-high { color: #EF4444; }
+.priority-medium { color: #F59E0B; }
+.priority-low { color: #6B7280; }
+.tab-btn.active-tab { color: #FF9933; border-bottom: 2px solid #FF9933; }
+@media (max-width: 1023px) { .workspace-split { flex-direction: column; } }
+</style>
+<script src="../js/auth.js"></script>
+</head>
+<body class="bg-background selection:bg-primary/20 selection:text-primary">
+
+<header id="topnav" class="fixed top-0 left-0 w-full z-50 bg-white/85 backdrop-blur-xl border-b border-outline-variant shadow-sm">
+  <div class="flex justify-between items-center px-gutter h-16 max-w-max_width mx-auto">
+    <div class="flex justify-between w-full">
+      <div class="flex items-center gap-8">
+        <a href="../index.html" class="text-xl font-bold text-primary tracking-tight font-['Geist']">ProgressOS</a>
+        <nav class="hidden lg:flex items-center gap-4">
+          <a href="../index.html" class="text-on-surface-variant font-medium text-sm hover:text-primary">Dashboard</a>
+          <a href="index.html" class="text-on-surface-variant font-medium text-sm hover:text-primary">Career Studio</a>
+          <a href="profile.html" class="text-on-surface-variant font-medium text-sm hover:text-primary">Profile</a>
+          <a href="photos.html" class="text-on-surface-variant font-medium text-sm hover:text-primary">Photos</a>
+          <a href="resume-profiles.html" class="text-on-surface-variant font-medium text-sm hover:text-primary">Resume Profiles</a>
+          <a href="snapshot.html" class="text-on-surface-variant font-medium text-sm hover:text-primary">Snapshot</a>
+          <a href="#" class="text-primary font-medium text-sm border-b-2 border-primary">Job Intelligence</a>
+        </nav>
+      </div>
+      <div id="auth-container"></div>
+    </div>
+  </div>
+</header>
+
+<main class="pt-24 pb-24 lg:pb-16 px-gutter max-w-max_width mx-auto">
+  <div class="flex items-center gap-3 mb-6">
+    <a href="index.html" class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">arrow_back</a>
+    <div>
+      <h1 class="text-2xl font-bold text-on-surface font-['Geist']">Job Intelligence</h1>
+      <p class="text-sm text-on-surface-variant">Analyze job descriptions, match against your resume, and generate targeted resumes.</p>
+    </div>
+  </div>
+
+  <div id="status" class="hidden mb-4 p-3 rounded-lg text-sm"></div>
+
+  <!-- Input Section -->
+  <div class="glass-card rounded-xl p-4 mb-6 animate-fade-in-up stagger-1">
+    <div class="flex flex-col lg:flex-row gap-4">
+      <div class="flex-1">
+        <label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5 block">Paste Job Description</label>
+        <textarea id="jd-input" rows="4" class="w-full border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none resize-y" placeholder="Paste a job description, LinkedIn job posting, or upload a file..."></textarea>
+        <div class="flex items-center gap-2 mt-2">
+          <input type="file" id="file-input" accept=".txt,.pdf,.docx" class="text-xs text-on-surface-variant file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer" style="max-width:200px"/>
+          <span class="text-[10px] text-on-surface-variant">TXT, PDF, or DOCX</span>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2 lg:justify-end">
+        <button onclick="handleAnalyze()" id="btn-analyze" class="bg-primary text-white px-6 py-2.5 rounded-lg font-bold text-sm hover:bg-[#e68a2e] active:scale-95 transition-all shadow-sm flex items-center gap-1.5 justify-center">
+          <span class="material-symbols-outlined text-[18px]">travel_explore</span>
+          Analyze
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loading-state" class="hidden text-center py-12">
+    <div class="animate-pulse space-y-4 max-w-lg mx-auto">
+      <div class="h-6 bg-gray-200 rounded w-1/3 mx-auto"></div>
+      <div class="h-24 bg-gray-200 rounded"></div>
+      <div class="h-24 bg-gray-200 rounded"></div>
+    </div>
+  </div>
+
+  <!-- Workspace -->
+  <div id="workspace" class="hidden">
+    <!-- Mobile Tabs -->
+    <div class="flex lg:hidden border-b border-gray-200 mb-4">
+      <button onclick="switchTab('analysis')" id="tab-analysis" class="tab-btn active-tab px-4 py-2 text-sm font-bold text-on-surface-variant">Analysis</button>
+      <button onclick="switchTab('preview')" id="tab-preview" class="tab-btn px-4 py-2 text-sm font-bold text-on-surface-variant">Preview</button>
+    </div>
+
+    <div class="workspace-split flex gap-6">
+      <!-- Left Panel: Analysis -->
+      <div id="panel-analysis" class="w-full lg:w-[420px] xl:w-[480px] shrink-0 space-y-4">
+        <!-- Job Context -->
+        <div class="glass-card rounded-xl p-4 animate-fade-in-up stagger-2" id="job-context-card">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="material-symbols-outlined text-primary text-lg">work</span>
+            <h2 class="text-sm font-bold text-on-surface font-['Geist']">Job Details</h2>
+          </div>
+          <div id="job-details" class="space-y-2">
+            <p class="text-xs text-on-surface-variant">No job analyzed yet. Paste a description above and click Analyze.</p>
+          </div>
+        </div>
+
+        <!-- Resume Profile Selector -->
+        <div class="glass-card rounded-xl p-4 animate-fade-in-up stagger-3">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="material-symbols-outlined text-primary text-lg">description</span>
+            <h2 class="text-sm font-bold text-on-surface font-['Geist']">Compare Against</h2>
+          </div>
+          <select id="profile-select" class="w-full border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none">
+            <option value="">Select a resume profile...</option>
+          </select>
+          <button onclick="handleMatch()" id="btn-match" class="mt-2 w-full bg-secondary text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#0000b3] active:scale-95 transition-all shadow-sm flex items-center gap-1.5 justify-center disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+            <span class="material-symbols-outlined text-[18px]">compare_arrows</span>
+            Match
+          </button>
+        </div>
+
+        <!-- Match Report -->
+        <div id="match-report" class="hidden space-y-4">
+          <div class="glass-card rounded-xl p-4 animate-fade-in-up stagger-3" id="match-score-card">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="material-symbols-outlined text-primary text-lg">score</span>
+              <h2 class="text-sm font-bold text-on-surface font-['Geist']">Match Score</h2>
+            </div>
+            <div class="text-center mb-4">
+              <span id="match-overall" class="text-4xl font-black text-primary font-['Geist']">--%</span>
+              <p class="text-xs text-on-surface-variant">Overall Match</p>
+            </div>
+            <div id="match-sections" class="space-y-2"></div>
+          </div>
+
+          <!-- Missing Skills -->
+          <div class="glass-card rounded-xl p-4 animate-fade-in-up stagger-4" id="missing-skills-card">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="material-symbols-outlined text-error text-lg">error_outline</span>
+              <h2 class="text-sm font-bold text-on-surface font-['Geist']">Missing Skills</h2>
+            </div>
+            <div id="missing-skills-list" class="space-y-2">
+              <p class="text-xs text-on-surface-variant">No missing skills identified.</p>
+            </div>
+          </div>
+
+          <!-- Keyword Heatmap -->
+          <div class="glass-card rounded-xl p-4 animate-fade-in-up stagger-4">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="material-symbols-outlined text-primary text-lg">visibility</span>
+              <h2 class="text-sm font-bold text-on-surface font-['Geist']">Keyword Heatmap</h2>
+            </div>
+            <div id="heatmap-list" class="space-y-2">
+              <p class="text-xs text-on-surface-variant">No keywords to display.</p>
+            </div>
+          </div>
+
+          <!-- Recommendations -->
+          <div class="glass-card rounded-xl p-4 animate-fade-in-up stagger-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="material-symbols-outlined text-secondary text-lg">tips_and_updates</span>
+              <h2 class="text-sm font-bold text-on-surface font-['Geist']">Recommendations</h2>
+            </div>
+            <div id="recommendations-list" class="space-y-2">
+              <p class="text-xs text-on-surface-variant">No recommendations yet.</p>
+            </div>
+          </div>
+
+          <!-- Create Resume Button -->
+          <button onclick="openCreateDialog()" class="w-full bg-tertiary text-white px-4 py-3 rounded-xl font-bold text-sm hover:bg-[#0f6f3d] active:scale-95 transition-all shadow-sm flex items-center gap-2 justify-center">
+            <span class="material-symbols-outlined text-[18px]">add_circle</span>
+            Create Resume For This Job
+          </button>
+        </div>
+
+        <!-- Recent Jobs -->
+        <div class="glass-card rounded-xl p-4 animate-fade-in-up stagger-5">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="material-symbols-outlined text-on-surface-variant text-lg">history</span>
+            <h2 class="text-sm font-bold text-on-surface font-['Geist']">Recent Jobs</h2>
+          </div>
+          <div id="recent-jobs" class="space-y-1">
+            <p class="text-xs text-on-surface-variant">No recent analyses.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel: Preview -->
+      <div id="panel-preview" class="flex-1 min-w-0">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-lg">visibility</span>
+            <h2 class="text-sm font-bold text-on-surface font-['Geist']">Resume Preview</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="refreshPreview()" class="text-xs text-on-surface-variant hover:text-primary flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px]">refresh</span>
+              Refresh
+            </button>
+          </div>
+        </div>
+        <div id="preview-container" class="preview-container min-h-[400px] lg:min-h-[600px] flex items-center justify-center">
+          <p class="text-sm text-on-surface-variant">Select a resume profile and run Match to see the preview.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Timeline -->
+  <div id="change-timeline" class="hidden fixed bottom-16 lg:bottom-4 left-1/2 -translate-x-1/2 z-40 bg-white/95 backdrop-blur-lg border border-gray-200 rounded-xl shadow-lg p-3 max-w-lg w-[90%]">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="material-symbols-outlined text-primary text-[16px]">history</span>
+      <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Changes</span>
+    </div>
+    <div id="timeline-items" class="space-y-1 max-h-24 overflow-y-auto"></div>
+  </div>
+</main>
+
+<!-- Mobile Bottom Nav -->
+<nav class="bottom-nav fixed bottom-0 left-0 w-full z-50 lg:hidden grid grid-cols-5 px-2">
+  <a href="../index.html" class="nav-item" data-nav="home">
+    <span class="material-symbols-outlined">home</span>
+    <span class="nav-label">Home</span>
+  </a>
+  <a href="index.html" class="nav-item" data-nav="studio">
+    <span class="material-symbols-outlined">badge</span>
+    <span class="nav-label">Studio</span>
+  </a>
+  <a href="profile.html" class="nav-item" data-nav="profile">
+    <span class="material-symbols-outlined">edit</span>
+    <span class="nav-label">Profile</span>
+  </a>
+  <a href="photos.html" class="nav-item" data-nav="photos">
+    <span class="material-symbols-outlined">photo_library</span>
+    <span class="nav-label">Photos</span>
+  </a>
+  <a href="resume-profiles.html" class="nav-item" data-nav="resumes">
+    <span class="material-symbols-outlined">description</span>
+    <span class="nav-label">Resumes</span>
+  </a>
+</nav>
+
+<!-- Create Resume Dialog -->
+<div id="create-dialog-overlay" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold text-on-surface font-['Geist']">Choose Starting Point</h3>
+      <button onclick="closeCreateDialog()" class="material-symbols-outlined text-on-surface-variant hover:text-on-surface">close</button>
+    </div>
+    <div id="strategy-options" class="space-y-3 mb-4"></div>
+    <button onclick="executeCreateStrategy()" id="btn-create-resume" class="w-full bg-tertiary text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-[#0f6f3d] active:scale-95 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+      Continue
+    </button>
+  </div>
+</div>
+
+<script type="module">
+import { el } from './renderer/renderer.js';
+import { ModernRenderer } from './renderer/templates/modern.js';
+import { MinimalRenderer } from './renderer/templates/minimal.js';
+
+const TEMPLATES = { modern: ModernRenderer, minimal: MinimalRenderer };
+
+// State
+let currentAnalysisId = null;
+let currentJobContext = null;
+let currentMatchReport = null;
+let currentRecommendations = [];
+let currentProfiles = [];
+let selectedProfileId = null;
+let previewContext = null;
+let analysesHistory = [];
+
+function showStatus(text, isError) {
+  const el = document.getElementById('status');
+  el.classList.remove('hidden');
+  el.textContent = text;
+  el.className = 'mb-4 p-3 rounded-lg text-sm font-bold ' + (isError ? 'text-error bg-error/5 border border-error/20' : 'text-tertiary bg-tertiary/5 border border-tertiary/20');
+  setTimeout(() => { el.classList.add('hidden'); }, 3000);
+}
+
+function showLoading(show) {
+  document.getElementById('loading-state').classList.toggle('hidden', !show);
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+// File handling
+document.getElementById('file-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    let text;
+    if (file.name.endsWith('.txt')) {
+      text = await file.text();
+    } else {
+      showStatus('PDF and DOCX parsing coming soon. For now, paste the text directly.', true);
+      return;
+    }
+    document.getElementById('jd-input').value = text;
+    showStatus('File loaded: ' + file.name, false);
+  } catch (err) {
+    showStatus('Error reading file: ' + err.message, true);
+  }
+});
+
+// Analyze
+window.handleAnalyze = async function() {
+  const rawText = document.getElementById('jd-input').value.trim();
+  if (rawText.length < 20) {
+    showStatus('Please paste a job description (at least 20 characters).', true);
+    return;
+  }
+
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">hourglass_top</span> Analyzing...';
+  showLoading(true);
+  document.getElementById('workspace').classList.add('hidden');
+
+  try {
+    const res = await window.apiRequest('POST', '/api/job-intelligence/extract', { rawText });
+    if (res.success && res.data) {
+      currentAnalysisId = res.data.analysis.id;
+      currentJobContext = res.data.context;
+      showJobContext(currentJobContext);
+      document.getElementById('workspace').classList.remove('hidden');
+      loadProfiles();
+      loadHistory();
+      showStatus('Job analyzed successfully!', false);
+    }
+  } catch (err) {
+    showStatus('Analysis failed: ' + (err.message || 'Unknown error'), true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">travel_explore</span> Analyze';
+    showLoading(false);
+  }
+};
+
+function showJobContext(ctx) {
+  const m = ctx.metadata;
+  document.getElementById('job-details').innerHTML = `
+    <div class="flex items-center gap-2 mb-1">
+      <span class="text-lg font-bold text-on-surface font-['Geist']">${escHtml(m.company)}</span>
+      <span class="text-xs text-on-surface-variant">—</span>
+      <span class="text-sm font-semibold text-on-surface">${escHtml(m.role)}</span>
+    </div>
+    <div class="flex flex-wrap gap-1.5 mb-2">
+      <span class="px-2 py-0.5 bg-gray-100 text-[10px] font-bold text-on-surface-variant rounded-full">${escHtml(m.seniority)}</span>
+      <span class="px-2 py-0.5 bg-gray-100 text-[10px] font-bold text-on-surface-variant rounded-full">${escHtml(m.employmentType)}</span>
+      <span class="px-2 py-0.5 bg-gray-100 text-[10px] font-bold text-on-surface-variant rounded-full">${escHtml(m.location)}${m.remote ? ' (Remote)' : ''}</span>
+      ${m.salary ? `<span class="px-2 py-0.5 bg-tertiary/10 text-tertiary text-[10px] font-bold rounded-full">${escHtml(m.salary)}</span>` : ''}
+    </div>
+    ${ctx.requiredSkills.length ? `
+      <div class="mb-1">
+        <p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Required Skills</p>
+        <div class="flex flex-wrap gap-1">${ctx.requiredSkills.map(s => `<span class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full">${escHtml(s)}</span>`).join('')}</div>
+      </div>
+    ` : ''}
+    ${ctx.preferredSkills.length ? `
+      <div class="mb-1">
+        <p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Preferred Skills</p>
+        <div class="flex flex-wrap gap-1">${ctx.preferredSkills.map(s => `<span class="px-2 py-0.5 bg-secondary/10 text-secondary text-[10px] font-bold rounded-full">${escHtml(s)}</span>`).join('')}</div>
+      </div>
+    ` : ''}
+    <button onclick="document.getElementById('jd-raw').classList.toggle('hidden')" class="text-[10px] text-on-surface-variant hover:text-primary mt-1 flex items-center gap-1">
+      <span class="material-symbols-outlined text-[14px]">unfold_more</span>
+      Show Raw JD
+    </button>
+    <pre id="jd-raw" class="hidden mt-2 p-2 bg-gray-50 rounded-lg text-[10px] text-on-surface-variant max-h-32 overflow-y-auto whitespace-pre-wrap">${escHtml(document.getElementById('jd-input').value)}</pre>
+  `;
+}
+
+// Load profiles
+async function loadProfiles() {
+  try {
+    const res = await window.apiRequest('GET', '/api/career-studio/resume-profiles');
+    currentProfiles = res.data || [];
+    const sel = document.getElementById('profile-select');
+    sel.innerHTML = '<option value="">Select a resume profile...</option>';
+    currentProfiles.forEach(p => {
+      sel.innerHTML += `<option value="${p.id}">${escHtml(p.name)}</option>`;
+    });
+    if (currentProfiles.length > 0) {
+      sel.disabled = false;
+      document.getElementById('btn-match').disabled = false;
+    }
+  } catch (err) {
+    console.error('Failed to load profiles:', err);
+  }
+}
+
+document.getElementById('profile-select').addEventListener('change', (e) => {
+  selectedProfileId = e.target.value || null;
+});
+
+// Match
+window.handleMatch = async function() {
+  if (!currentAnalysisId || !selectedProfileId) {
+    showStatus('Please analyze a job and select a resume profile.', true);
+    return;
+  }
+
+  const btn = document.getElementById('btn-match');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">hourglass_top</span> Matching...';
+
+  try {
+    const res = await window.apiRequest('POST', '/api/job-intelligence/match', {
+      jobAnalysisId: currentAnalysisId,
+      resumeProfileId: selectedProfileId,
+    });
+    if (res.success && res.data) {
+      currentMatchReport = res.data.report;
+      showMatchReport(currentMatchReport);
+      loadPreview(selectedProfileId);
+      showStatus('Match complete!', false);
+    }
+  } catch (err) {
+    showStatus('Match failed: ' + (err.message || 'Unknown error'), true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">compare_arrows</span> Match';
+  }
+};
+
+function showMatchReport(report) {
+  document.getElementById('match-report').classList.remove('hidden');
+
+  document.getElementById('match-overall').textContent = report.overall + '%';
+
+  const sectionsEl = document.getElementById('match-sections');
+  const sectionLabels = { skills: 'Skills', projects: 'Projects', education: 'Education', experience: 'Experience' };
+  const sectionColors = { skills: 'bg-primary', projects: 'bg-secondary', education: 'bg-tertiary', experience: 'bg-blue-500' };
+
+  sectionsEl.innerHTML = Object.entries(report.sections).map(([key, s]) => `
+    <div class="flex items-center gap-3">
+      <span class="text-xs font-semibold text-on-surface w-20">${sectionLabels[key] || key}</span>
+      <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div class="h-full ${sectionColors[key] || 'bg-primary'} rounded-full" style="width:${s.score}%"></div>
+      </div>
+      <span class="text-xs font-bold text-on-surface w-10 text-right">${s.score}%</span>
+    </div>
+  `).join('');
+
+  // Missing skills
+  const missingEl = document.getElementById('missing-skills-list');
+  if (report.missingSkills.length === 0) {
+    missingEl.innerHTML = '<p class="text-xs text-tertiary font-bold flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">check_circle</span>All required skills are covered!</p>';
+  } else {
+    missingEl.innerHTML = report.missingSkills.map(m => `
+      <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[14px] priority-${m.priority}">${m.priority === 'high' ? 'priority_high' : 'remove_circle_outline'}</span>
+          <span class="text-xs font-semibold text-on-surface">${escHtml(m.skill)}</span>
+          <span class="text-[9px] px-1.5 py-0.5 rounded-full ${m.priority === 'high' ? 'bg-error/10 text-error' : m.priority === 'medium' ? 'bg-yellow-50 text-yellow-700' : 'bg-gray-100 text-on-surface-variant'} font-bold">${m.priority}</span>
+        </div>
+        <span class="text-[10px] text-on-surface-variant">${m.confidence}% conf.</span>
+      </div>
+    `).join('');
+  }
+
+  // Keyword heatmap
+  const heatEl = document.getElementById('heatmap-list');
+  if (report.keywordHeatmap.length === 0) {
+    heatEl.innerHTML = '<p class="text-xs text-on-surface-variant">No keywords extracted.</p>';
+  } else {
+    const maxCount = Math.max(...report.keywordHeatmap.map(k => k.count), 1);
+    heatEl.innerHTML = report.keywordHeatmap.map(k => `
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-medium text-on-surface w-24 truncate" title="${escHtml(k.term)}">${escHtml(k.term)}</span>
+        <div class="flex-1">
+          <div class="flex items-center gap-1 mb-0.5">
+            <span class="text-[8px] text-on-surface-variant w-5">Job</span>
+            <div class="flex-1 h-3 bg-gray-100 rounded-sm overflow-hidden">
+              <div class="h-full bg-primary rounded-sm heatmap-bar" style="width:${(k.count / maxCount) * 100}%"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="text-[8px] text-on-surface-variant w-5">Res</span>
+            <div class="flex-1 h-3 bg-gray-100 rounded-sm overflow-hidden">
+              <div class="h-full ${k.inResume ? 'bg-tertiary' : 'bg-gray-200'} rounded-sm heatmap-bar" style="width:${k.inResume ? '100' : '10'}%"></div>
+            </div>
+          </div>
+        </div>
+        <span class="text-[10px] text-on-surface-variant">${k.count}x</span>
+      </div>
+    `).join('');
+  }
+
+  // Recommendations
+  const recEl = document.getElementById('recommendations-list');
+  currentMatchReport = report;
+  renderRecommendations(report);
+}
+
+function renderRecommendations(report) {
+  const recEl = document.getElementById('recommendations-list');
+  const allRecs = [];
+
+  // Warnings
+  if (report.warnings && report.warnings.length > 0) {
+    report.warnings.forEach(w => {
+      allRecs.push({ type: 'warning', label: w, confidence: 90, section: 'warning' });
+    });
+  }
+
+  // Skills missing
+  if (report.missingSkills) {
+    report.missingSkills.filter(m => m.priority === 'high').forEach(m => {
+      allRecs.push({ type: 'highlight_skill', label: `Add ${m.skill}`, description: `Required skill missing from resume.`, confidence: m.confidence, section: 'skills', payload: { skill: m.skill } });
+    });
+  }
+
+  // Projects
+  if (report.recommendedProjects) {
+    report.recommendedProjects.filter(p => p.relevance >= 40).forEach(p => {
+      allRecs.push({ type: 'use_project', label: `Highlight ${p.title}`, description: `${p.relevance}% relevance. Technologies: ${p.matchingTechnologies.join(', ')}`, confidence: p.confidence, section: 'projects', sectionItemId: p.projectId });
+    });
+  }
+
+  currentRecommendations = allRecs;
+
+  if (allRecs.length === 0) {
+    recEl.innerHTML = '<p class="text-xs text-tertiary font-bold flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">check_circle</span>Your resume looks great for this role!</p>';
+    return;
+  }
+
+  recEl.innerHTML = allRecs.map((r, i) => `
+    <div class="flex items-start gap-2 p-2.5 bg-gray-50 rounded-lg recommendation-item" data-index="${i}">
+      <span class="material-symbols-outlined text-[16px] ${r.type === 'warning' ? 'text-error' : 'text-secondary'} mt-0.5">${r.type === 'warning' ? 'warning' : r.type === 'highlight_skill' ? 'add_circle' : 'checklist'}</span>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-semibold text-on-surface">${escHtml(r.label)}</p>
+        ${r.description ? `<p class="text-[10px] text-on-surface-variant mt-0.5">${escHtml(r.description)}</p>` : ''}
+        <span class="text-[9px] text-on-surface-variant">${r.confidence}% confidence</span>
+      </div>
+      <button onclick="previewSuggestion(${i})" class="text-[10px] font-bold text-primary hover:underline shrink-0 preview-btn">Preview</button>
+    </div>
+  `).join('');
+}
+
+window.previewSuggestion = function(index) {
+  const rec = currentRecommendations[index];
+  if (!rec) return;
+
+  const btns = document.querySelectorAll('.recommendation-item');
+  btns.forEach((b, i) => {
+    b.classList.toggle('border', i === index);
+    b.classList.toggle('border-primary', i === index);
+  });
+
+  addTimelineEntry('Previewed: ' + rec.label);
+  showStatus('Previewing: ' + rec.label, false);
+};
+
+function addTimelineEntry(text) {
+  const el = document.getElementById('timeline-items');
+  document.getElementById('change-timeline').classList.remove('hidden');
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  el.innerHTML = `<div class="flex items-center gap-1.5 text-xs text-on-surface"><span class="text-tertiary">&#10003;</span> ${escHtml(text)} <span class="text-[9px] text-on-surface-variant">${time}</span></div>` + el.innerHTML;
+  const maxItems = 5;
+  while (el.children.length > maxItems) el.removeChild(el.lastChild);
+}
+
+// Preview
+async function loadPreview(profileId) {
+  const container = document.getElementById('preview-container');
+  container.innerHTML = '<div class="animate-pulse p-8 text-center"><div class="h-4 bg-gray-200 rounded w-1/2 mx-auto mb-2"></div><div class="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div></div>';
+
+  try {
+    const res = await window.apiRequest('GET', `/api/career-intelligence/context/${profileId}`);
+    if (res.success && res.data) {
+      previewContext = res.data;
+      renderPreview(previewContext);
+    }
+  } catch (err) {
+    container.innerHTML = `<p class="text-sm text-error">Failed to load preview: ${escHtml(err.message)}</p>`;
+  }
+}
+
+function renderPreview(context) {
+  const container = document.getElementById('preview-container');
+  try {
+    const templateName = 'modern';
+    const TemplateClass = TEMPLATES[templateName];
+    if (!TemplateClass) throw new Error('Template not found: ' + templateName);
+    const renderer = new TemplateClass();
+    const resumeEl = renderer.render(context);
+    container.innerHTML = '';
+    container.appendChild(resumeEl);
+  } catch (err) {
+    container.innerHTML = `<p class="text-sm text-error">Render error: ${escHtml(err.message)}</p>`;
+  }
+}
+
+window.refreshPreview = function() {
+  if (selectedProfileId) loadPreview(selectedProfileId);
+};
+
+// Create Resume Dialog
+let similarityScores = [];
+let selectedStrategy = 'smart';
+let selectedSourceProfileId = null;
+
+window.openCreateDialog = async function() {
+  if (!currentAnalysisId) {
+    showStatus('Analyze a job first.', true);
+    return;
+  }
+  document.getElementById('create-dialog-overlay').classList.remove('hidden');
+  const optionsEl = document.getElementById('strategy-options');
+  optionsEl.innerHTML = '<div class="animate-pulse p-4 text-center"><div class="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div></div>';
+
+  try {
+    const res = await window.apiRequest('POST', '/api/job-intelligence/similarity-scores', { jobAnalysisId: currentAnalysisId });
+    similarityScores = res.data?.scores || [];
+
+    const best = similarityScores[0];
+    optionsEl.innerHTML = `
+      <label class="block p-3 rounded-xl border-2 border-primary bg-primary/5 cursor-pointer transition-all" onclick="selectStrategy('smart')">
+        <input type="radio" name="strategy" value="smart" checked class="sr-only">
+        <div class="flex items-start gap-3">
+          <span class="material-symbols-outlined text-primary" style="font-variation-settings:'FILL' 1;">auto_awesome</span>
+          <div>
+            <p class="text-sm font-bold text-on-surface">Smart Start <span class="text-[10px] text-primary font-normal">(Recommended)</span></p>
+            <p class="text-xs text-on-surface-variant mt-0.5">ProgressOS chooses the best starting profile based on similarity.</p>
+            ${best ? `<p class="text-xs font-bold text-primary mt-1">Best match: ${escHtml(best.profileName)} (${best.score}%)</p>` : '<p class="text-xs text-on-surface-variant mt-1">No existing profiles found. Will start fresh.</p>'}
+          </div>
+        </div>
+      </label>
+
+      <div class="p-3 rounded-xl border border-gray-200 cursor-pointer transition-all" id="clone-option" onclick="selectStrategy('clone')">
+        <div class="flex items-start gap-3">
+          <span class="material-symbols-outlined text-secondary" style="font-variation-settings:'FILL' 0;">content_copy</span>
+          <div class="flex-1">
+            <p class="text-sm font-bold text-on-surface">Clone Existing Profile</p>
+            <select id="clone-profile-select" class="mt-1 w-full border border-gray-200 rounded-lg p-1.5 text-xs focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" onclick="event.stopPropagation()">
+              ${currentProfiles.map(p => `<option value="${p.id}">${escHtml(p.name)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <label class="block p-3 rounded-xl border border-gray-200 cursor-pointer transition-all" onclick="selectStrategy('fresh')">
+        <input type="radio" name="strategy" value="fresh" class="sr-only">
+        <div class="flex items-start gap-3">
+          <span class="material-symbols-outlined text-tertiary" style="font-variation-settings:'FILL' 0;">add_box</span>
+          <div>
+            <p class="text-sm font-bold text-on-surface">Start Fresh</p>
+            <p class="text-xs text-on-surface-variant mt-0.5">Create a completely new resume profile using Job Intelligence only.</p>
+          </div>
+        </div>
+      </label>
+    `;
+
+    if (similarityScores.length > 1) {
+      let scoresHtml = '<div class="mt-2 p-2 bg-gray-50 rounded-lg"><p class="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Similarity Scores</p>';
+      similarityScores.slice(0, 4).forEach(s => {
+        scoresHtml += `<div class="flex items-center gap-2 text-[10px] py-0.5"><span class="text-on-surface">${escHtml(s.profileName)}</span><div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full" style="width:${s.score}%"></div></div><span class="font-bold text-on-surface">${s.score}%</span></div>`;
+      });
+      scoresHtml += '</div>';
+      optionsEl.innerHTML += scoresHtml;
+    }
+  } catch (err) {
+    optionsEl.innerHTML = `<p class="text-xs text-error">Failed to load options: ${escHtml(err.message)}</p>`;
+  }
+};
+
+window.selectStrategy = function(strategy) {
+  selectedStrategy = strategy;
+  document.querySelectorAll('#strategy-options > label, #strategy-options > div').forEach(el => {
+    el.classList.remove('border-primary', 'bg-primary/5');
+    el.classList.add('border-gray-200');
+  });
+  if (strategy === 'clone') {
+    document.getElementById('clone-option').classList.remove('border-gray-200');
+    document.getElementById('clone-option').classList.add('border-primary', 'bg-primary/5');
+  }
+};
+
+window.closeCreateDialog = function() {
+  document.getElementById('create-dialog-overlay').classList.add('hidden');
+};
+
+window.executeCreateStrategy = async function() {
+  const btn = document.getElementById('btn-create-resume');
+  btn.disabled = true;
+  btn.textContent = 'Creating...';
+
+  try {
+    let sourceProfileId;
+    if (selectedStrategy === 'clone') {
+      sourceProfileId = document.getElementById('clone-profile-select')?.value;
+    } else if (selectedStrategy === 'smart') {
+      sourceProfileId = similarityScores[0]?.profileId;
+    }
+
+    const res = await window.apiRequest('POST', '/api/job-intelligence/create-resume-strategy', {
+      jobAnalysisId: currentAnalysisId,
+      strategy: selectedStrategy,
+      sourceProfileId,
+    });
+
+    if (res.success && res.data) {
+      closeCreateDialog();
+      showStatus(`Resume "${res.data.resumeProfile.name}" created! Opening preview...`, false);
+      setTimeout(() => {
+        window.location.href = `resume-preview.html?id=${res.data.resumeProfile.id}`;
+      }, 1000);
+    }
+  } catch (err) {
+    showStatus('Failed to create resume: ' + (err.message || 'Unknown error'), true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Continue';
+  }
+};
+
+// History
+async function loadHistory() {
+  try {
+    const res = await window.apiRequest('GET', '/api/job-intelligence/analyses');
+    analysesHistory = res.data?.analyses || [];
+    const el = document.getElementById('recent-jobs');
+    if (analysesHistory.length === 0) {
+      el.innerHTML = '<p class="text-xs text-on-surface-variant">No recent analyses.</p>';
+      return;
+    }
+    el.innerHTML = analysesHistory.slice(0, 10).map(a => `
+      <button onclick="loadAnalysis('${a.id}')" class="w-full text-left flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 transition-colors ${a.id === currentAnalysisId ? 'bg-primary/5' : ''}">
+        <span class="material-symbols-outlined text-[14px] text-on-surface-variant">description</span>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-semibold text-on-surface truncate">${escHtml(a.company || 'Unknown')} — ${escHtml(a.title || 'Unknown')}</p>
+          <p class="text-[9px] text-on-surface-variant">${timeAgo(a.createdAt)}</p>
+        </div>
+      </button>
+    `).join('');
+  } catch (err) {
+    console.error('Failed to load history:', err);
+  }
+}
+
+window.loadAnalysis = async function(id) {
+  try {
+    showLoading(true);
+    const res = await window.apiRequest('GET', `/api/job-intelligence/analyses/${id}`);
+    if (res.success && res.data) {
+      currentAnalysisId = res.data.analysis.id;
+      currentJobContext = res.data.context;
+      document.getElementById('jd-input').value = res.data.analysis.rawText;
+      showJobContext(currentJobContext);
+      document.getElementById('workspace').classList.remove('hidden');
+      document.getElementById('match-report').classList.add('hidden');
+      loadHistory();
+      showStatus('Loaded previous analysis.', false);
+    }
+  } catch (err) {
+    showStatus('Failed to load analysis: ' + (err.message || 'Unknown error'), true);
+  } finally {
+    showLoading(false);
+  }
+};
+
+// Tab switching (mobile)
+window.switchTab = function(tab) {
+  document.getElementById('panel-analysis').classList.toggle('hidden', tab !== 'analysis');
+  document.getElementById('panel-preview').classList.toggle('hidden', tab !== 'preview');
+  document.getElementById('tab-analysis').classList.toggle('active-tab', tab === 'analysis');
+  document.getElementById('tab-preview').classList.toggle('active-tab', tab === 'preview');
+};
+
+// Init
+if (window.clerkReady) init();
+else window.addEventListener('clerk-ready', init);
+
+async function init() {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const loadId = urlParams.get('load');
+    if (loadId) {
+      await loadAnalysis(loadId);
+    }
+    loadHistory();
+  } catch (err) {
+    console.error('Init error:', err);
+  }
+}
+</script>
+
+</body>
+</html>

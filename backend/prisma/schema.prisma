@@ -72,6 +72,7 @@ model User {
   careerProfile   CareerProfile?
 
   certificates    Certificate[]
+  jobAnalyses     JobAnalysis[]
 
   @@index([clerkId])
 }
@@ -534,6 +535,7 @@ model ResumeProfile {
   resumeAchievements     ResumeAchievement[]
   aiReviews              AIReview[]
   resumeRevisions        ResumeRevision[]
+  jobAnalyses            JobAnalysis[]
   activeRevisionId       String?  @unique
   activeRevision         ResumeRevision?  @relation("ActiveRevision", fields: [activeRevisionId], references: [id], onDelete: SetNull)
 
@@ -628,6 +630,25 @@ model ResumeChange {
   payload         Json           // The actual changes
 
   @@index([revisionId])
+}
+
+// ─── Job Intelligence ──────────────────────────────────────────────────────
+
+model JobAnalysis {
+  id              String         @id @default(uuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeProfileId String?
+  resumeProfile   ResumeProfile? @relation(fields: [resumeProfileId], references: [id], onDelete: SetNull)
+  title           String?
+  company         String?
+  rawText         String
+  parsedJson      Json           @default("{}")
+  createdAt       DateTime       @default(now())
+
+  @@index([userId])
+  @@index([resumeProfileId])
+  @@index([createdAt])
 }
 
 // ─── XPTransaction ───────────────────────────────────────────────────────────
