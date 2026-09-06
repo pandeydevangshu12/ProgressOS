@@ -5,7 +5,8 @@ export type AIAction =
   | 'rewrite' | 'improve' | 'ats-optimize'
   | 'shorten' | 'expand' | 'technical' | 'beginner-friendly'
   | 'quantify' | 'action-verbs' | 'star-format'
-  | 'recruiter-friendly';
+  | 'recruiter-friendly'
+  | 'extract';
 
 export interface ImproveRequest {
   resumeProfileId: string;

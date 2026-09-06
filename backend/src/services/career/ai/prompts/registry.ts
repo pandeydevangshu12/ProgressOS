@@ -2,6 +2,7 @@ import type { PromptModule } from '../../../../types/ai.types.js';
 import { RewriteSummaryPrompt } from './rewrite-summary.js';
 import { RewriteProjectPrompt } from './rewrite-project.js';
 import { QuantifyAchievementPrompt } from './quantify-achievement.js';
+import { ExtractJobPrompt } from './extract-job.js';
 
 const prompts = new Map<string, PromptModule>();
 
@@ -16,6 +17,7 @@ function register(prompt: PromptModule): void {
 register(RewriteSummaryPrompt);
 register(RewriteProjectPrompt);
 register(QuantifyAchievementPrompt);
+register(ExtractJobPrompt);
 
 // Also register common aliases
 prompts.set('summary:improve', RewriteSummaryPrompt);

@@ -92,9 +92,11 @@ import { createTrackerRouter } from './utils/trackerFactory.js';
 import gateSyllabusRoutes from './routes/gateSyllabus.routes.js';
 import careerStudioRoutes from './routes/career-studio.routes.js';
 import careerIntelligenceRoutes from './routes/career-intelligence.routes.js';
+import jobIntelligenceRoutes from './routes/job-intelligence.routes.js';
 
 app.use('/api/career-studio', careerStudioRoutes);
 app.use('/api/career-intelligence', careerIntelligenceRoutes);
+app.use('/api/job-intelligence', jobIntelligenceRoutes);
 
 // ─── Project Bullet Routes ────────────────────────────────────────────────
 
